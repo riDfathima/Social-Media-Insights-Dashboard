@@ -2,3 +2,4 @@ pandas
 plotly
 streamlit
 openpyxl
+starlette==0.41.3

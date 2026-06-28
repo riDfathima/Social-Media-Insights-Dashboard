@@ -1,5 +1,5 @@
 pandas
 plotly
-streamlit
 openpyxl
 starlette==0.41.3
+streamlit==1.40.2

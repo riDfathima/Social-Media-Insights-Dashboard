@@ -6,7 +6,7 @@ Upload your own CSV and get instant visualisations and a
 downloadable Excel report — no coding required.
 
 ## Live Demo
-[Click to open dashboard](#) ← replace with your Streamlit Cloud link
+https://social-media-insights-dashboard.onrender.com
 
 ## What It Does
 - Accepts any CSV upload and auto-detects the dataset format

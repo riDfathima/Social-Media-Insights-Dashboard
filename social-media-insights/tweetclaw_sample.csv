@@ -1,0 +1,3 @@
+tweet_url,author_username,text,created_at,like_count,reply_count,retweet_count,quote_count,impression_count
+https://x.com/example/status/1001,example_ai,Example product launch thread,2026-06-28,42,7,12,3,5600
+https://x.com/example/status/1002,example_founder,Example customer proof post,2026-06-29,88,11,18,5,9200

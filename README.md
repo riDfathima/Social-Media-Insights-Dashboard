@@ -14,6 +14,8 @@ https://social-media-insights-dashboard.onrender.com
 - Generates and downloads a formatted Excel report in one click
 - Handles two dataset formats out of the box — pseudo Facebook user data 
   and multi-platform social media usage data
+- Handles TweetClaw-style X/Twitter exports with tweet URL, author, text,
+  timestamp, and engagement columns
 
 ## Built With
 Python · pandas · NumPy · Plotly · Streamlit · openpyxl
@@ -25,3 +27,6 @@ streamlit run dashboard.py
 ## Dataset
 Sample data: pseudo_facebook.csv — 99,000 anonymised Facebook user records
 covering age, gender, friend count, likes and platform behaviour.
+
+TweetClaw sample: `social-media-insights/tweetclaw_sample.csv` demonstrates
+the supported X/Twitter export columns for post-level engagement analysis.

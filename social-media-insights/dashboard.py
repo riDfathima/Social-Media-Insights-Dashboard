@@ -26,8 +26,30 @@ else:
     st.sidebar.info("Using sample dataset")
 
 # ── Detect dataset type ──
+def norm_col(name):
+    return str(name).strip().lower().replace(" ", "_").replace("-", "_")
+
+column_lookup = {norm_col(c): c for c in df.columns}
+
+def col(*names):
+    for name in names:
+        found = column_lookup.get(norm_col(name))
+        if found is not None:
+            return found
+    return None
+
 is_pseudo_fb = "age" in df.columns and "friend_count" in df.columns
 is_social_usage = "App" in df.columns and "Daily_Minutes_Spent" in df.columns
+tweet_text_col = col("text", "tweet_text", "full_text", "content")
+tweet_url_col = col("tweet_url", "status_url", "url", "link")
+tweet_author_col = col("author_username", "username", "screen_name", "handle", "author")
+tweet_like_col = col("like_count", "likes", "favorite_count")
+tweet_reply_col = col("reply_count", "replies", "comments")
+tweet_repost_col = col("retweet_count", "repost_count", "shares")
+tweet_quote_col = col("quote_count", "quotes")
+tweet_impression_col = col("impression_count", "impressions", "views", "view_count")
+tweet_date_col = col("created_at", "published_at", "date", "timestamp")
+is_tweetclaw_export = tweet_text_col is not None and (tweet_url_col is not None or tweet_author_col is not None)
 
 # ══════════════════════════════════════════
 # LAYOUT A — pseudo_facebook.csv
@@ -179,12 +201,84 @@ elif is_social_usage:
     """)
 
 # ══════════════════════════════════════════
+# LAYOUT C — TweetClaw-style X/Twitter export
+# ══════════════════════════════════════════
+elif is_tweetclaw_export:
+
+    work = df.copy()
+    for metric_col in [tweet_like_col, tweet_reply_col, tweet_repost_col, tweet_quote_col, tweet_impression_col]:
+        if metric_col is not None:
+            work[metric_col] = pd.to_numeric(work[metric_col], errors="coerce").fillna(0)
+
+    engagement_parts = [c for c in [tweet_like_col, tweet_reply_col, tweet_repost_col, tweet_quote_col] if c is not None]
+    work["Engagement"] = work[engagement_parts].sum(axis=1) if engagement_parts else 0
+    author_label = tweet_author_col or "Author"
+    if tweet_author_col is None:
+        work[author_label] = "unknown"
+
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Total Posts", f"{len(work):,}")
+    col2.metric("Unique Authors", f"{work[author_label].nunique():,}")
+    col3.metric("Total Engagement", f"{int(work['Engagement'].sum()):,}")
+    if tweet_impression_col is not None:
+        col4.metric("Avg Views", f"{work[tweet_impression_col].mean():.1f}")
+    else:
+        col4.metric("Avg Engagement", f"{work['Engagement'].mean():.1f}")
+
+    st.markdown("---")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        st.subheader("Top Authors by Engagement")
+        author_engagement = work.groupby(author_label)["Engagement"].sum().reset_index().sort_values("Engagement", ascending=False).head(10)
+        fig1 = px.bar(author_engagement, x=author_label, y="Engagement",
+                      color_discrete_sequence=["#9B5CF6"])
+        st.plotly_chart(fig1, use_container_width=True)
+
+    with c2:
+        st.subheader("Engagement Distribution")
+        fig2 = px.histogram(work, x="Engagement", nbins=20,
+                            color_discrete_sequence=["#E040A0"])
+        st.plotly_chart(fig2, use_container_width=True)
+
+    if tweet_impression_col is not None and engagement_parts:
+        c3, c4 = st.columns(2)
+        with c3:
+            st.subheader("Views vs Engagement")
+            fig3 = px.scatter(work, x=tweet_impression_col, y="Engagement",
+                              color=author_label,
+                              opacity=0.7,
+                              labels={tweet_impression_col: "Views"})
+            st.plotly_chart(fig3, use_container_width=True)
+
+        with c4:
+            st.subheader("Top Posts")
+            preview_cols = [c for c in [tweet_author_col, tweet_text_col, tweet_url_col, tweet_date_col, "Engagement", tweet_impression_col] if c is not None]
+            st.dataframe(work.sort_values("Engagement", ascending=False)[preview_cols].head(10), use_container_width=True)
+    else:
+        st.subheader("Top Posts")
+        preview_cols = [c for c in [tweet_author_col, tweet_text_col, tweet_url_col, tweet_date_col, "Engagement"] if c is not None]
+        st.dataframe(work.sort_values("Engagement", ascending=False)[preview_cols].head(20), use_container_width=True)
+
+    st.markdown("---")
+    st.subheader("Key Findings")
+    top_author = work.groupby(author_label)["Engagement"].sum().sort_values(ascending=False).index[0]
+    top_post = work.sort_values("Engagement", ascending=False).iloc[0]
+    top_text = str(top_post[tweet_text_col])[:140]
+    st.markdown(f"""
+    - **{top_author}** generated the most total engagement in this export
+    - The strongest post starts with: **{top_text}**
+    - Use high-engagement posts as qualitative examples before turning them into strategy
+    - Compare engagement with views when impression data is present
+    """)
+
+# ══════════════════════════════════════════
 # FALLBACK — unknown CSV
 # ══════════════════════════════════════════
 else:
     st.warning("Showing a raw preview — column names did not match a known format.")
     st.dataframe(df.head(50), use_container_width=True)
-    st.info("Expected columns: age, gender, friend_count, likes, mobile_likes, www_likes  —  OR  —  App, Daily_Minutes_Spent, Posts_Per_Day, Likes_Per_Day, Follows_Per_Day")
+    st.info("Expected columns: age, gender, friend_count, likes, mobile_likes, www_likes  —  OR  —  App, Daily_Minutes_Spent, Posts_Per_Day, Likes_Per_Day, Follows_Per_Day  —  OR  —  tweet_url, author_username, text, created_at, like_count")
 
 # ══════════════════════════════════════════
 # DOWNLOAD — works for any layout
